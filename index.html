@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام فحص الطلاب في الامتحانات</title>
+    <!-- استدعاء مكتبة قراءة الـ QR -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: Tahoma, sans-serif; background: #f0f2f5; text-align: center; margin: 0; padding: 20px; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #reader { width: 100%; border-radius: 8px; overflow: hidden; }
+        .result-box { margin-top: 20px; padding: 15px; border-radius: 8px; background: #fafafa; display: none; border: 1px solid #ddd; }
+        .result-box img { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #007bff; margin-bottom: 10px; }
+        h2 { color: #333; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>ماسح بطاقات الطلاب</h2>
+    <div id="reader"></div>
+
+    <div id="result" class="result-box">
+        <img id="studentPhoto" src="" alt="صورة الطالب">
+        <h3 id="studentName">--</h3>
+        <p><strong>الصف:</strong> <span id="studentClass">--</span></p>
+        <p><strong>الرقم الامتحاني:</strong> <span id="studentID">--</span></p>
+        <button onclick="resetScanner()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">فحص طالب آخر</button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.firestore.js";
+
+    // إعدادات Firebase الخاصة بك
+    const firebaseConfig = {
+      apiKey: "AIzaSyBiakUsaKfRXNzM2MPekhcMAfqZibyH8lg",
+      authDomain: "studentscannersystem.firebaseapp.com",
+      projectId: "studentscannersystem",
+      storageBucket: "studentscannersystem.firebasestorage.app",
+      messagingSenderId: "639227810648",
+      appId: "1:639227810648:web:a586a171027b9689b08b2d",
+      measurementId: "G-JJMS0W2GH7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let html5QrCode;
+
+    function onScanSuccess(decodedText, decodedResult) {
+        // توقف مؤقت للكاميرا عند قراءة الكود بنجاح
+        html5QrCode.stop().then(() => {
+            fetchStudentData(decodedText.trim());
+        }).catch(err => {
+            console.error("خطأ في إيقاف الماسح", err);
+        });
+    }
+
+    async function fetchStudentData(id) {
+        try {
+            const docRef = doc(db, "students", id);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                document.getElementById("studentName").innerText = data.fullName || "بدون اسم";
+                document.getElementById("studentClass").innerText = data.className || "--";
+                document.getElementById("studentID").innerText = id;
+                document.getElementById("studentPhoto").src = data.photoURL || "https://via.placeholder.com/150";
+                
+                document.getElementById("reader").style.display = "none";
+                document.getElementById("result").style.display = "block";
+            } else {
+                alert("هذا الطالب غير مسجل في النظام! الرقم: " + id);
+                resetScanner();
+            }
+        } catch (error) {
+            console.error("خطأ في جلب البيانات:", error);
+            alert("حدث خطأ أثناء الاتصال بقاعدة البيانات");
+            resetScanner();
+        }
+    }
+
+    window.resetScanner = function() {
+        document.getElementById("result").style.display = "none";
+        document.getElementById("reader").style.display = "block";
+        html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            onScanSuccess
+        );
+    }
+
+    // تشغيل الكاميرا عند فتح الصفحة
+    html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        onScanSuccess
+    ).catch(err => {
+        alert("لا يمكن تشغيل الكاميرا، يرجى التأكد من إعطاء الصلاحية للمتصفح.");
+    });
+</script>
+
+</body>
+</html>
