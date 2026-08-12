@@ -2,108 +2,101 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام فحص الطلاب في الامتحانات</title>
-    <!-- استدعاء مكتبة قراءة الـ QR -->
+    <title>نظام إدارة الطلاب المتقدم</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: Tahoma, sans-serif; background: #f0f2f5; text-align: center; margin: 0; padding: 20px; }
-        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        #reader { width: 100%; border-radius: 8px; overflow: hidden; }
-        .result-box { margin-top: 20px; padding: 15px; border-radius: 8px; background: #fafafa; display: none; border: 1px solid #ddd; }
-        .result-box img { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #007bff; margin-bottom: 10px; }
-        h2 { color: #333; }
+        body { font-family: Tahoma, sans-serif; background: #f0f2f5; text-align: center; padding: 10px; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; }
+        .nav-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 20px; }
+        .nav-buttons button { padding: 10px; border: none; border-radius: 5px; cursor: pointer; background: #ddd; }
+        .nav-buttons button.active { background: #007bff; color: white; }
+        .page { display: none; }
+        .page.active { display: block; }
+        input, button.btn-action { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 5px; }
+        .btn-action { background: #28a745; color: white; cursor: pointer; }
+        .btn-danger { background: #dc3545; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>ماسح بطاقات الطلاب</h2>
-    <div id="reader"></div>
+    <div class="nav-buttons">
+        <button id="btn1" class="active" onclick="showPage('scan')">ماسح</button>
+        <button id="btn2" onclick="showPage('add')">إضافة</button>
+        <button id="btn3" onclick="showPage('delete')">حذف</button>
+        <button id="btn4" onclick="showPage('tools')">أدوات</button>
+    </div>
 
-    <div id="result" class="result-box">
-        <img id="studentPhoto" src="" alt="صورة الطالب">
-        <h3 id="studentName">--</h3>
-        <p><strong>الصف:</strong> <span id="studentClass">--</span></p>
-        <p><strong>الرقم الامتحاني:</strong> <span id="studentID">--</span></p>
-        <button onclick="resetScanner()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">فحص طالب آخر</button>
+    <!-- 1. صفحة الماسح -->
+    <div id="scan" class="page active">
+        <div id="reader" style="width: 100%;"></div>
+    </div>
+
+    <!-- 2. صفحة الإضافة -->
+    <div id="add" class="page">
+        <input type="text" id="id" placeholder="الرقم الامتحاني">
+        <input type="text" id="name" placeholder="اسم الطالب">
+        <button class="btn-action" onclick="saveStudent()">حفظ الطالب</button>
+    </div>
+
+    <!-- 3. صفحة الحذف -->
+    <div id="delete" class="page">
+        <input type="text" id="delID" placeholder="أدخل رقم الطالب للحذف">
+        <button class="btn-action btn-danger" onclick="moveToTrash()">نقل إلى المحذوفات</button>
+    </div>
+
+    <!-- 4. صفحة الأدوات -->
+    <div id="tools" class="page">
+        <button class="btn-action" onclick="exportData()">تصدير البيانات (JSON)</button>
+        <button class="btn-action" onclick="restoreDeleted()">استرجاع المحذوفات</button>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.firestore.js";
 
-    // إعدادات Firebase الخاصة بك
-    const firebaseConfig = {
-      apiKey: "AIzaSyBiakUsaKfRXNzM2MPekhcMAfqZibyH8lg",
-      authDomain: "studentscannersystem.firebaseapp.com",
-      projectId: "studentscannersystem",
-      storageBucket: "studentscannersystem.firebasestorage.app",
-      messagingSenderId: "639227810648",
-      appId: "1:639227810648:web:a586a171027b9689b08b2d",
-      measurementId: "G-JJMS0W2GH7"
+    const db = getFirestore(initializeApp({ /* ضع إعدادات Firebase هنا كما في الكود السابق */ }));
+
+    window.showPage = (page) => {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-buttons button').forEach(b => b.classList.remove('active'));
+        document.getElementById(page).classList.add('active');
+        document.getElementById('btn' + (page=='scan'?1:page=='add'?2:page=='delete'?3:4)).classList.add('active');
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    // وظيفة الحذف (النقل للمحذوفات)
+    window.moveToTrash = async () => {
+        const id = document.getElementById('delID').value;
+        const docRef = doc(db, "students", id);
+        const snap = await getDoc(docRef);
+        if(snap.exists()){
+            await setDoc(doc(db, "trash", id), snap.data());
+            await deleteDoc(docRef);
+            alert("تم النقل للمحذوفات");
+        } else { alert("الطالب غير موجود"); }
+    };
 
-    let html5QrCode;
-
-    function onScanSuccess(decodedText, decodedResult) {
-        // توقف مؤقت للكاميرا عند قراءة الكود بنجاح
-        html5QrCode.stop().then(() => {
-            fetchStudentData(decodedText.trim());
-        }).catch(err => {
-            console.error("خطأ في إيقاف الماسح", err);
+    // وظيفة الاسترجاع
+    window.restoreDeleted = async () => {
+        const snap = await getDocs(collection(db, "trash"));
+        snap.forEach(async (d) => {
+            await setDoc(doc(db, "students", d.id), d.data());
+            await deleteDoc(doc(db, "trash", d.id));
         });
-    }
+        alert("تم استرجاع جميع المحذوفات");
+    };
 
-    async function fetchStudentData(id) {
-        try {
-            const docRef = doc(db, "students", id);
-            const docSnap = await getDoc(docRef);
-
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                document.getElementById("studentName").innerText = data.fullName || "بدون اسم";
-                document.getElementById("studentClass").innerText = data.className || "--";
-                document.getElementById("studentID").innerText = id;
-                document.getElementById("studentPhoto").src = data.photoURL || "https://via.placeholder.com/150";
-                
-                document.getElementById("reader").style.display = "none";
-                document.getElementById("result").style.display = "block";
-            } else {
-                alert("هذا الطالب غير مسجل في النظام! الرقم: " + id);
-                resetScanner();
-            }
-        } catch (error) {
-            console.error("خطأ في جلب البيانات:", error);
-            alert("حدث خطأ أثناء الاتصال بقاعدة البيانات");
-            resetScanner();
-        }
-    }
-
-    window.resetScanner = function() {
-        document.getElementById("result").style.display = "none";
-        document.getElementById("reader").style.display = "block";
-        html5QrCode.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            onScanSuccess
-        );
-    }
-
-    // تشغيل الكاميرا عند فتح الصفحة
-    html5QrCode = new Html5Qrcode("reader");
-    html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        onScanSuccess
-    ).catch(err => {
-        alert("لا يمكن تشغيل الكاميرا، يرجى التأكد من إعطاء الصلاحية للمتصفح.");
-    });
+    // تصدير البيانات
+    window.exportData = async () => {
+        const snap = await getDocs(collection(db, "students"));
+        let data = [];
+        snap.forEach(d => data.push({id: d.id, ...d.data()}));
+        console.log(JSON.stringify(data));
+        alert("تم نسخ البيانات للـ Console، تحقق منه");
+    };
+    
+    // (أضف دالة الحفظ saveStudent بنفس منطق الكود السابق)
 </script>
-
 </body>
 </html>
