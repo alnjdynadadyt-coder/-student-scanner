@@ -7,11 +7,15 @@
     
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <!-- مكتبة توليد الباركود QR Code -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <style>
         body { font-family: Tahoma, sans-serif; background: #f8f9fa; text-align: center; margin: 0; padding: 15px; }
         .container { max-width: 650px; margin: auto; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: right; }
-        .back-btn { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-size: 14px; text-decoration: none; display: inline-block; }
+        .nav-btns { display: flex; justify-content: space-between; margin-bottom: 15px; }
+        .back-btn, .cards-btn { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-block; }
+        .cards-btn { background: #17a2b8; }
         input, select { width: 100%; padding: 12px; margin: 8px 0 15px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; text-align: right; background: #fff; }
         .form-submit { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
         #statusBox { background: #e9ecef; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; color: #333; text-align: center; font-weight: bold; }
@@ -21,12 +25,20 @@
         .actions-group button { padding: 6px 10px; margin-right: 5px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
         .btn-edit { background: #ffc107; color: #000; }
         .btn-delete { background: #dc3545; color: #fff; }
+        
+        /* صندوق معاينة الباركود للطالب الأخير */
+        #qrPreviewBox { margin-top: 20px; padding: 15px; background: #e8f4fd; border: 1px dashed #007bff; border-radius: 10px; text-align: center; display: none; }
+        #qrcode { display: inline-block; margin-top: 10px; background: white; padding: 10px; border-radius: 8px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <a href="index.html" class="back-btn">⬅ عودة للرئيسية</a>
+    <div class="nav-btns">
+        <a href="index.html" class="back-btn">⬅ عودة للرئيسية</a>
+        <a href="cards.html" class="cards-btn">🪪 عرض جميع بطاقات الطلاب للطباعة</a>
+    </div>
+
     <h3 style="text-align:center;">إدارة وإضافة الطلاب</h3>
     
     <div id="statusBox">✅ متصل بقاعدة البيانات بنجاح</div>
@@ -56,7 +68,7 @@
             <option value="ب">ب</option>
             <option value="ج">ج</option>
             <option value="د">د</option>
-            <option value="هاء">هاء</option>
+            <option value="هـ">هـ</option>
             <option value="و">و</option>
             <option value="ز">ز</option>
         </select>
@@ -67,7 +79,14 @@
         <button class="form-submit" onclick="saveStudent()">حفظ وإضافة الطالب</button>
     </div>
 
-    <h4 style="text-align:right;">قائمة الطلاب المسجلين:</h4>
+    <!-- معاينة باركود الطالب الذي تم حفظه للتو -->
+    <div id="qrPreviewBox">
+        <h4 style="margin: 0 0 10px 0; color: #007bff;">🪪 باركود الطالب المضاف:</h4>
+        <div id="qrcode"></div>
+        <p id="qrStudentName" style="margin: 8px 0 0 0; font-weight: bold; color: #333;"></p>
+    </div>
+
+    <h4 style="text-align:right; margin-top: 25px;">قائمة الطلاب المسجلين:</h4>
     <div id="studentsList">
         <p style="text-align:center;">جاري جلب السجلات...</p>
     </div>
@@ -87,7 +106,6 @@
     const db = firebase.firestore();
     const statusBox = document.getElementById('statusBox');
 
-    // دالة لضغط وصغير الصورة تلقائياً لتقع ضمن حجم Firebase المسموح
     function compressImage(file) {
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -118,7 +136,7 @@
                     canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL('image/jpeg', 0.7)); // ضغط الجودة لـ 70% لتصغير الحجم
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
                 };
             };
         });
@@ -190,6 +208,17 @@
             statusBox.style.color = "green";
             alert("تم الحفظ بنجاح!");
             
+            // توليد وعرض الباركود للطالب الذي تم حفظه مباشرة في الصفحة
+            document.getElementById('qrPreviewBox').style.display = "block";
+            document.getElementById('qrcode').innerHTML = "";
+            new QRCode(document.getElementById('qrcode'), {
+                text: id,
+                width: 140,
+                height: 140
+            });
+            document.getElementById('qrStudentName').innerText = `${fullName} (ID: ${id})`;
+
+            // تصفير الحقول
             document.getElementById('addID').value = '';
             document.getElementById('addName').value = '';
             document.getElementById('addClass').value = '';
