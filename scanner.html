@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ماسح الباركود السريع</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: Tahoma, sans-serif; background: #f8f9fa; text-align: center; margin: 0; padding: 15px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: right; }
+        .back-btn { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-size: 14px; text-decoration: none; display: inline-block; }
+        #reader { width: 100%; border-radius: 8px; overflow: hidden; margin-top: 10px; }
+        .result-card { background: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #ddd; text-align: center; margin-top: 15px; }
+        .result-card img { width: 130px; height: 130px; border-radius: 50%; object-fit: cover; border: 3px solid #007bff; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="index.html" class="back-btn">⬅ عودة للرئيسية</a>
+    <h3 style="text-align:center;">ماسح البطاقات</h3>
+    <div id="reader"></div>
+    <div id="resultBox" class="result-card" style="display:none;">
+        <img id="resPhoto" src="" alt="صورة الطالب">
+        <h3 id="resName">--</h3>
+        <p><strong>الصف:</strong> <span id="resClass">--</span></p>
+        <p><strong>الرقم الامتحاني:</strong> <span id="resID">--</span></p>
+        <button class="back-btn" style="background:#007bff; width:100%; border:none; padding:12px; font-size:16px;" onclick="resetScan()">فحص طالب آخر</button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBiakUsaKfRXNzM2MPekhcMAfqZibyH8lg",
+      authDomain: "studentscannersystem.firebaseapp.com",
+      projectId: "studentscannersystem",
+      storageBucket: "studentscannersystem.firebasestorage.app",
+      messagingSenderId: "639227810648",
+      appId: "1:639227810648:web:a586a171027b9689b08b2d"
+    };
+
+    const db = getFirestore(initializeApp(firebaseConfig));
+    let html5QrCode = new Html5Qrcode("reader");
+
+    html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        async (decodedText) => {
+            html5QrCode.stop();
+            const id = decodedText.trim();
+            const docSnap = await getDoc(doc(db, "students", id));
+            
+            document.getElementById('reader').style.display = 'none';
+            document.getElementById('resultBox').style.display = 'block';
+
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                document.getElementById('resName').innerText = data.fullName;
+                document.getElementById('resClass').innerText = data.className;
+                document.getElementById('resID').innerText = id;
+                document.getElementById('resPhoto').src = data.photoURL || "https://via.placeholder.com/130";
+            } else {
+                document.getElementById('resName').innerText = "الطالب غير مسجل!";
+                document.getElementById('resClass').innerText = "--";
+                document.getElementById('resID').innerText = id;
+                document.getElementById('resPhoto').src = "https://via.placeholder.com/130";
+            }
+        }
+    ).catch(err => console.log(err));
+
+    window.resetScan = function() {
+        location.reload();
+    };
+</script>
+
+</body>
+</html>
