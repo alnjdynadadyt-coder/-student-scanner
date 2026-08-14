@@ -10,7 +10,6 @@
         .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
         h2 { color: #333; margin-bottom: 25px; }
         
-        /* تنسيق أزرار لوحة التحكم لتكون بارزة وسهلة اللمس على الآيباد */
         .menu-btn {
             width: 100%;
             padding: 16px;
@@ -28,13 +27,11 @@
         }
         .menu-btn:active { transform: scale(0.98); }
 
-        /* ألوان مخصصة لكل زر لسهولة التمييز */
         .btn-scan { background: #007bff; } /* ماسح الباركود السريع */
-        .btn-cards { background: #6f42c1; } /* صفحة عرض وطباعة البطاقات (الجديد) */
+        .btn-cards { background: #6f42c1; } /* بطاقات الطلاب */
         .btn-manage { background: #17a2b8; } /* إدارة وإضافة الطلاب */
         .btn-export { background: #28a745; } /* التصدير والاستيراد */
         .btn-archive { background: #6c757d; } /* أرشيف المحذوفات */
-        .btn-backup { background: #343a40; } /* النسخ الاحتياطي */
         .btn-delete { background: #dc3545; } /* حذف السجلات */
     </style>
 </head>
@@ -43,20 +40,23 @@
 <div class="container">
     <h2>لوحة تحكم المدرسة</h2>
 
-    <!-- زر الماسح السريع -->
-    <a href="scan.html" class="menu-btn btn-scan">📷 ماسح الباركود السريع</a>
+    <!-- تم ضبط اسم الملف ليكون scanner.html المطابق لمستودعك -->
+    <a href="scanner.html" class="menu-btn btn-scan">📷 ماسح الباركود السريع</a>
 
-    <!-- الزر الجديد: صفحة عرض وطباعة البطاقات والباركود -->
+    <!-- صفحة عرض البطاقات -->
     <a href="cards.html" class="menu-btn btn-cards">🖨 بطاقات ومستمسكات الطلاب (QR)</a>
 
-    <!-- زر إدارة وإضافة الطلاب -->
+    <!-- إدارة وإضافة الطلاب -->
     <a href="add.html" class="menu-btn btn-manage">👤 إدارة وإضافة الطلاب</a>
 
-    <!-- بقية أزرار النظام -->
-    <a href="#" class="menu-btn btn-export">📦 التصدير والاستيراد</a>
-    <a href="#" class="menu-btn btn-archive">🗄 إدارة أرشيف المحذوفات</a>
-    <a href="#" class="menu-btn btn-backup">🛡 النسخ الاحتياطي للنظام</a>
-    <a href="#" class="menu-btn btn-delete">🗑 حذف السجلات</a>
+    <!-- التصدير والاستيراد -->
+    <a href="export.html" class="menu-btn btn-export">📦 التصدير والاستيراد</a>
+
+    <!-- أرشيف المحذوفات -->
+    <a href="archive.html" class="menu-btn btn-archive">🗄 إدارة أرشيف المحذوفات</a>
+
+    <!-- حذف السجلات -->
+    <a href="delete.html" class="menu-btn btn-delete">🗑 حذف السجلات</a>
 </div>
 
 </body>
