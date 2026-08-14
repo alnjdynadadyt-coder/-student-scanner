@@ -3,42 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>صفحة مسح وفحص الطلاب</title>
+    <title>نظام مسح وفحص الطلاب</title>
     
-    <!-- مكتبات Firebase الشاملة ومتوافق مع الآيباد -->
+    <!-- مكتبات Firebase الشاملة -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <!-- مكتبة قراءة الباركود والـ QR عبر كاميرا الآيباد -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <style>
         body { font-family: Tahoma, sans-serif; background: #f8f9fa; text-align: center; margin: 0; padding: 15px; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: right; }
+        .container { max-width: 650px; margin: auto; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: right; }
         .back-btn { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-size: 14px; text-decoration: none; display: inline-block; }
         input { width: 100%; padding: 12px; margin: 8px 0 15px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; text-align: right; }
         .search-btn { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
         
-        #resultCard { margin-top: 20px; background: #f1f3f4; padding: 20px; border-radius: 12px; display: none; text-align: center; }
-        .student-big-img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #007bff; margin-bottom: 10px; }
-        .success-box { background: #d4edda; color: #155724; padding: 10px; border-radius: 6px; margin-top: 10px; font-weight: bold; }
+        #reader { width: 100%; border-radius: 10px; overflow: hidden; margin-bottom: 15px; background: #000; }
+        
+        #resultCard { margin-top: 20px; background: #f1f3f4; padding: 25px; border-radius: 14px; display: none; text-align: center; border: 2px solid #007bff; }
+        /* تكبير وتوضيح صورة الطالب بشكل بارز جداً */
+        .student-big-img { width: 180px; height: 180px; border-radius: 50%; object-fit: cover; border: 4px solid #28a745; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        .success-box { background: #d4edda; color: #155724; padding: 12px; border-radius: 8px; margin-top: 15px; font-weight: bold; font-size: 16px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <a href="index.html" class="back-btn">⬅ عودة للرئيسية</a>
-    <h3 style="text-align:center;">نظام مسح وفحص الطلاب</h3>
+    <h3 style="text-align:center;">ماسح وقارئ بطاقات الطلاب</h3>
 
-    <div style="background: #fff; padding: 15px; border: 1px solid #eee; border-radius: 10px;">
-        <label>أدخل أو مسح الرقم الامتحاني (ID):</label>
-        <input type="text" id="scanID" placeholder="مثال: 01 أو 02">
-        <button class="search-btn" onclick="findStudent()">بحث عن الطالب</button>
+    <!-- تشغيل الكاميرا المباشر لقراءة الـ QR -->
+    <div style="background: #fff; padding: 10px; border: 1px solid #eee; border-radius: 10px; margin-bottom: 15px;">
+        <label style="font-weight:bold; display:block; margin-bottom:5px;">كاميرا المسح المباشر (QR Code):</label>
+        <div id="reader"></div>
     </div>
 
-    <!-- كارت عرض نتيجة البحث والطالب -->
+    <!-- خيار البحث اليدوي الاحتياطي -->
+    <div style="background: #fff; padding: 15px; border: 1px solid #eee; border-radius: 10px;">
+        <label>أو أدخل الرقم الامتحاني يدوياً:</label>
+        <input type="text" id="scanID" placeholder="مثال: 01 أو 1001">
+        <button class="search-btn" onclick="findStudent(document.getElementById('scanID').value.trim())">بحث يدوي</button>
+    </div>
+
+    <!-- كارت عرض بيانات الطالب والصورة الكبيرة -->
     <div id="resultCard">
         <img id="resPhoto" class="student-big-img" src="" alt="صورة الطالب">
-        <h2 id="resName" style="margin: 5px 0; color: #333;"></h2>
-        <p id="resDetails" style="color: #666; font-size: 16px;"></p>
-        <div class="success-box">✅ تم التعرف على الطالب بنجاح في النظام</div>
+        <h1 id="resName" style="margin: 10px 0; color: #222;"></h1>
+        <p id="resDetails" style="color: #555; font-size: 18px; font-weight: bold;"></p>
+        <div class="success-box">✅ تم التحقق من الطالب بنجاح</div>
     </div>
 </div>
 
@@ -55,20 +67,17 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    window.findStudent = function() {
-        const id = document.getElementById('scanID').value.trim();
+    // دالة البحث وجلب بيانات الطالب من قاعدة البيانات
+    function findStudent(id) {
+        if (!id) return;
+        
         const resultCard = document.getElementById('resultCard');
-
-        if (!id) {
-            alert("الرجاء إدخال أو مسح الرقم الامتحاني!");
-            return;
-        }
 
         db.collection("students").doc(id).get().then((doc) => {
             if (doc.exists) {
                 const data = doc.data();
                 document.getElementById('resName').innerText = data.fullName;
-                document.getElementById('resDetails').innerText = `المرحلة: ${data.className || 'غيرحدد'} | الشعبة: ${data.section || 'غيرحدد'} | ID: ${doc.id}`;
+                document.getElementById('resDetails').innerText = `المرحلة: ${data.className || 'غير محدد'} | الشعبة: ${data.section || 'غير محدد'} | ID: ${doc.id}`;
                 
                 const photoImg = document.getElementById('resPhoto');
                 if (data.photoURL) {
@@ -79,14 +88,29 @@
                 }
 
                 resultCard.style.display = "block";
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
             } else {
-                resultCard.style.display = "none";
-                alert("لم يتم العثور على طالب بهذا الرقم في قاعدة البيانات!");
+                alert("لم يتم العثور على طالب يحمل الرقم: " + id);
             }
         }).catch((error) => {
-            alert("حدث خطأ في البحث: " + error.message);
+            alert("خطأ في الاتصال: " + error.message);
         });
-    };
+    }
+
+    // تفعيل كاميرا الآيباد لمسح الـ QR تلقائياً
+    function onScanSuccess(decodedText) {
+        document.getElementById('scanID').value = decodedText;
+        findStudent(decodedText);
+    }
+
+    let html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.start(
+        { facingMode: "environment" }, 
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        onScanSuccess
+    ).catch(err => {
+        console.log("تعذر تشغيل الكاميرا تلقائياً، يمكنك استخدام البحث اليدوي.");
+    });
 </script>
 
 </body>
