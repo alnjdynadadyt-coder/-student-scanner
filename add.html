@@ -3,14 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إدارة وإضافة الطلاب - اختبار مباشر</title>
+    <title>إدارة وإضافة الطلاب</title>
+    
+    <!-- مكتبات Firebase الشاملة المتوافقة مع الآيباد -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
     <style>
         body { font-family: Tahoma, sans-serif; background: #f8f9fa; text-align: center; margin: 0; padding: 15px; }
         .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: right; }
         .back-btn { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-size: 14px; text-decoration: none; display: inline-block; }
         input, select { width: 100%; padding: 12px; margin: 8px 0 15px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; text-align: right; background: #fff; }
         .form-submit { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
-        #statusBox { background: #e9ecef; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; color: #333; text-align: center; }
+        #statusBox { background: #e9ecef; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; color: #333; text-align: center; font-weight: bold; }
         .list-item { background: #fdfdfd; padding: 12px; margin-bottom: 8px; border: 1px solid #eee; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
@@ -18,9 +23,9 @@
 
 <div class="container">
     <a href="index.html" class="back-btn">⬅ عودة للرئيسية</a>
-    <h3 style="text-align:center;">إدارة وإضافة الطلاب (وضع التشخيص)</h3>
+    <h3 style="text-align:center;">إدارة وإضافة الطلاب</h3>
     
-    <div id="statusBox">جاري الاتصال بـ Firebase...</div>
+    <div id="statusBox">جاري الاتصال بقاعدة البيانات...</div>
 
     <div style="background: #f1f3f4; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
         <label>الرقم الامتحاني (ID):</label>
@@ -46,23 +51,23 @@
             <option value="أ">أ</option>
             <option value="ب">ب</option>
             <option value="ج">ج</option>
+            <option value="د">د</option>
+            <option value="هاء">هاء</option>
             <option value="و">و</option>
             <option value="ز">ز</option>
         </select>
 
-        <button class="form-submit" onclick="saveData()">حفظ البيانات تجريبياً</button>
+        <button class="form-submit" onclick="saveStudent()">حفظ وإضافة الطالب</button>
     </div>
 
     <h4 style="text-align:right;">قائمة الطلاب المسجلين:</h4>
     <div id="studentsList">
-        <p style="text-align:center;">جاري جلب البيانات...</p>
+        <p style="text-align:center;">جاري جلب السجلات...</p>
     </div>
 </div>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.js";
-    import { getFirestore, doc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.firestore.js";
-
+<script>
+    // إعدادات مشروعك المباشرة
     const firebaseConfig = {
       apiKey: "AIzaSyBiakUsaKfRXNzM2MPekhcMAfqZibyH8lg",
       authDomain: "studentscannersystem.firebaseapp.com",
@@ -72,49 +77,42 @@
       appId: "1:639227810648:web:a586a171027b9689b08b2d"
     };
 
+    // تهيئة فايربيز بالطريقة المباشرة
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
     const statusBox = document.getElementById('statusBox');
-    let db;
+    statusBox.innerHTML = "✅ متصل بقاعدة البيانات بنجاح";
+    statusBox.style.color = "green";
 
-    try {
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        statusBox.innerHTML = "✅ متصل بقاعدة البيانات بنجاح";
-        statusBox.style.color = "green";
-        loadStudents();
-    } catch (error) {
-        statusBox.innerHTML = "❌ خطأ في الاتصال: " + error.message;
-        statusBox.style.color = "red";
-    }
-
-    async function loadStudents() {
+    // جلب وعرض الطلاب مباشرة
+    function loadStudents() {
         const listDiv = document.getElementById('studentsList');
-        try {
-            const querySnapshot = await getDocs(collection(db, "students"));
+        db.collection("students").get().then((querySnapshot) => {
             listDiv.innerHTML = "";
-            
             if (querySnapshot.empty) {
-                listDiv.innerHTML = "<p style='text-align:center; color:#666;'>لا توجد بيانات مسجلة حالياً في القاعدة.</p>";
+                listDiv.innerHTML = "<p style='text-align:center; color:#666;'>لا توجد بيانات مسجلة حالياً.</p>";
                 return;
             }
-
-            querySnapshot.forEach((docSnap) => {
-                const data = docSnap.data();
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
                 listDiv.innerHTML += `
                     <div class="list-item">
                         <div>
                             <strong>${data.fullName}</strong><br>
-                            <small>${data.className || ''} - شعبة ${data.section || ''}</small>
+                            <small style="color:#666;">${data.className || ''} - شعبة ${data.section || ''}</small>
                         </div>
-                        <small style="color: blue; font-weight: bold;">ID: ${docSnap.id}</small>
+                        <small style="color: blue; font-weight: bold;">ID: ${doc.id}</small>
                     </div>
                 `;
             });
-        } catch (err) {
-            listDiv.innerHTML = `<p style='text-align:center; color:red;'>خطأ في القراءة: ${err.message}</p>`;
-        }
+        }).catch((error) => {
+            listDiv.innerHTML = "<p style='text-align:center; color:red;'>خطأ في قراءة البيانات: " + error.message + "</p>";
+        });
     }
 
-    window.saveData = async function() {
+    // حفظ الطالب
+    window.saveStudent = function() {
         const id = document.getElementById('addID').value.trim();
         const fullName = document.getElementById('addName').value.trim();
         const className = document.getElementById('addClass').value;
@@ -125,32 +123,34 @@
             return;
         }
 
-        statusBox.innerHTML = "⏳ جاري إرسال البيانات إلى Firebase...";
+        statusBox.innerHTML = "⏳ جاري الحفظ في النظام...";
         
-        try {
-            await setDoc(doc(db, "students", id), {
-                fullName: fullName,
-                className: className,
-                section: section,
-                photoURL: ""
-            });
-            
-            statusBox.innerHTML = "✅ تمت العملية وحفظ الطالب بنجاح!";
+        db.collection("students").doc(id).set({
+            fullName: fullName,
+            className: className,
+            section: section,
+            photoURL: ""
+        }).then(() => {
+            statusBox.innerHTML = "✅ تم حفظ الطالب بنجاح!";
             statusBox.style.color = "green";
-            alert("تم الحفظ بنجاح!");
+            alert("تم حفظ الطالب بنجاح!");
             
+            // تصفير الحقول
             document.getElementById('addID').value = '';
             document.getElementById('addName').value = '';
             document.getElementById('addClass').value = '';
             document.getElementById('addSection').value = '';
             
             loadStudents();
-        } catch (err) {
-            statusBox.innerHTML = "❌ خطأ عند الحفظ: " + err.message;
+        }).catch((error) => {
+            statusBox.innerHTML = "❌ خطأ في الحفظ: " + error.message;
             statusBox.style.color = "red";
-            alert("خطأ في الحفظ: " + err.message);
-        }
+            alert("فشل الحفظ: " + error.message);
+        });
     };
+
+    // تشغيل الدالة عند فتح الصفحة
+    loadStudents();
 </script>
 
 </body>
