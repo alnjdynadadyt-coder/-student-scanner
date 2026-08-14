@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إضافة طالب جديد</title>
+    <title>إضافة وإدارة الطلاب</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -11,51 +11,50 @@
 
     <style>
         body { font-family: Tahoma, sans-serif; background: #f8f9fa; text-align: center; margin: 0; padding: 15px; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: right; }
-        .back-btn { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-size: 14px; text-decoration: none; display: inline-block; }
-        input, select { width: 100%; padding: 12px; margin: 8px 0 15px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; text-align: right; background: #fff; }
-        .form-submit { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
-        #statusBox { background: #e9ecef; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; color: #333; text-align: center; font-weight: bold; }
+        .container { max-width: 650px; margin: auto; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: right; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0 15px 0; border: 1px solid #ccc; border-radius: 8px; }
+        .form-submit { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .list-item { background: #fdfdfd; padding: 12px; margin-bottom: 10px; border: 1px solid #eee; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; }
+        #qrcode { margin-top: 15px; display: inline-block; }
+        .qr-area { text-align: center; margin-top: 20px; padding: 15px; background: #f0f8ff; border-radius: 10px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <a href="index.html" class="back-btn">⬅ عودة للرئيسية</a>
+    <a href="index.html" style="text-decoration:none;">⬅ عودة</a>
     <h3 style="text-align:center;">إضافة طالب جديد</h3>
     
-    <div id="statusBox">✅ النظام جاهز</div>
-
     <div style="background: #f1f3f4; padding: 15px; border-radius: 10px;">
         <label>اسم الطالب الكامل:</label>
         <input type="text" id="addName" placeholder="أدخل اسم الطالب">
 
-        <label>المرحلة الدراسية:</label>
+        <label>المرحلة:</label>
         <select id="addClass">
-            <option value="">-- اختر المرحلة --</option>
-            <option value="الرابع العلمي">الرابع العلمي</option>
-            <option value="الخامس العلمي">الخامس العلمي</option>
-            <option value="السادس العلمي">السادس العلمي</option>
-            <option value="الرابع الأدبي">الرابع الأدبي</option>
-            <option value="الخامس الأدبي">الخامس الأدبي</option>
-            <option value="السادس الأدبي">السادس الأدبي</option>
+            <option value="الرابع">الرابع</option>
+            <option value="الخامس">الخامس</option>
+            <option value="السادس">السادس</option>
         </select>
 
         <label>الشعبة:</label>
         <select id="addSection">
-            <option value="">-- اختر الشعبة --</option>
-            <option value="أ">أ</option>
-            <option value="ب">ب</option>
-            <option value="ج">ج</option>
-            <option value="د">د</option>
-            <option value="و">و</option>
+            <option value="أ">أ</option><option value="ب">ب</option><option value="ج">ج</option>
+            <option value="د">د</option><option value="هـ">هـ</option><option value="و">و</option><option value="ز">ز</option>
         </select>
 
         <label>صورة الطالب:</label>
-        <input type="file" id="addPhotoFile" accept="image/*" style="background:#fff;">
+        <input type="file" id="addPhotoFile" accept="image/*">
 
-        <button class="form-submit" onclick="saveStudent()">حفظ وإضافة الطالب</button>
+        <button class="form-submit" onclick="saveStudent()">حفظ الطالب وإنشاء الباركود</button>
     </div>
+
+    <div id="qrArea" class="qr-area">
+        <h4>باركود الطالب المضاف:</h4>
+        <div id="qrcode"></div>
+    </div>
+
+    <h4 style="margin-top:30px;">قائمة الطلاب:</h4>
+    <div id="studentsList"></div>
 </div>
 
 <script>
@@ -71,50 +70,49 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    function compressImage(file) {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = (e) => {
-                const img = new Image();
-                img.src = e.target.result;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = 300; canvas.height = 300;
-                    canvas.getContext('2d').drawImage(img, 0, 0, 300, 300);
-                    resolve(canvas.toDataURL('image/jpeg', 0.7));
-                };
-            };
+    function loadStudents() {
+        db.collection("students").get().then(snap => {
+            const list = document.getElementById('studentsList');
+            list.innerHTML = "";
+            snap.forEach(doc => {
+                const d = doc.data();
+                list.innerHTML += `<div class="list-item"><strong>${d.fullName}</strong> - ${d.className} ${d.section}</div>`;
+            });
         });
     }
 
-    window.saveStudent = async function() {
-        const fullName = document.getElementById('addName').value.trim();
-        const className = document.getElementById('addClass').value;
-        const section = document.getElementById('addSection').value;
-        const fileInput = document.getElementById('addPhotoFile');
-
-        if (!fullName) { alert("أدخل اسم الطالب!"); return; }
-
-        // إنشاء ID فريد بناءً على الوقت الحالي
-        const newID = "STU" + Date.now().toString().slice(-6);
-
-        let studentData = {
-            fullName: fullName,
-            className: className,
-            section: section,
-            createdAt: new Date()
-        };
-
-        if (fileInput.files.length > 0) {
-            studentData.photoURL = await compressImage(fileInput.files[0]);
+    async function saveStudent() {
+        const name = document.getElementById('addName').value;
+        const cls = document.getElementById('addClass').value;
+        const sec = document.getElementById('addSection').value;
+        const file = document.getElementById('addPhotoFile').files[0];
+        
+        let photoURL = "";
+        if (file) {
+            const canvas = document.createElement('canvas');
+            const img = new Image();
+            img.src = await new Promise(r => { const fr = new FileReader(); fr.onload = (e) => r(e.target.result); fr.readAsDataURL(file); });
+            canvas.width = 200; canvas.height = 200;
+            canvas.getContext('2d').drawImage(img, 0, 0, 200, 200);
+            photoURL = canvas.toDataURL('image/jpeg', 0.5);
         }
 
-        db.collection("students").doc(newID).set(studentData).then(() => {
-            alert("تم حفظ الطالب بنجاح! \nالرقم التعريفي (ID): " + newID);
-            location.reload();
-        }).catch((err) => { alert("خطأ: " + err.message); });
-    };
+        const studentData = { fullName: name, className: cls, section: sec, photoURL: photoURL };
+        const docRef = await db.collection("students").add(studentData);
+        
+        // إنشاء الباركود يحتوي على كامل البيانات
+        document.getElementById('qrArea').style.display = "block";
+        document.getElementById('qrcode').innerHTML = "";
+        new QRCode(document.getElementById('qrcode'), {
+            text: JSON.stringify({id: docRef.id, ...studentData}),
+            width: 150, height: 150
+        });
+
+        alert("تم الحفظ!");
+        loadStudents();
+    }
+
+    loadStudents();
 </script>
 </body>
 </html>
