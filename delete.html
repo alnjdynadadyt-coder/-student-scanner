@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حذف السجلات</title>
+    <style>
+        body { font-family: Tahoma, sans-serif; background: #f8f9fa; text-align: center; margin: 0; padding: 15px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: right; }
+        .back-btn { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-size: 14px; text-decoration: none; display: inline-block; }
+        input { width: 100%; padding: 12px; margin: 8px 0 15px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; text-align: right; }
+        .form-submit { width: 100%; padding: 12px; background: #dc3545; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="index.html" class="back-btn">⬅ عودة للرئيسية</a>
+    <h3 style="color: #dc3545; text-align:center;">نقل السجل إلى المحذوفات</h3>
+    <label>أدخل الرقم الامتحاني للطالب المراد حذفه:</label>
+    <input type="text" id="delInputID" placeholder="مثال: 1001">
+    <button class="form-submit" onclick="deleteStudent()">تنفيذ الحذف والأرشفة</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.js";
+    import { getFirestore, doc, setDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBiakUsaKfRXNzM2MPekhcMAfqZibyH8lg",
+      authDomain: "studentscannersystem.firebaseapp.com",
+      projectId: "studentscannersystem",
+      storageBucket: "studentscannersystem.firebasestorage.app",
+      messagingSenderId: "639227810648",
+      appId: "1:639227810648:web:a586a171027b9689b08b2d"
+    };
+
+    const db = getFirestore(initializeApp(firebaseConfig));
+
+    window.deleteStudent = async function() {
+        const id = document.getElementById('delInputID').value.trim();
+        if(!id) return alert("أدخل الرقم الامتحاني");
+        const ref = doc(db, "students", id);
+        const snap = await getDoc(ref);
+        if(snap.exists()) {
+            await setDoc(doc(db, "trash", id), snap.data());
+            await deleteDoc(ref);
+            alert("تم نقل السجل إلى الأرشيف بنجاح");
+            location.href = "index.html";
+        } else {
+            alert("هذا الطالب غير موجود في السجلات النشطة");
+        }
+    };
+</script>
+
+</body>
+</html>
