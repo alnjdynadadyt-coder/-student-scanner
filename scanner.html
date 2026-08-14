@@ -3,36 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ماسح الباركود السريع</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <title>صفحة مسح وفحص الطلاب</title>
+    
+    <!-- مكتبات Firebase الشاملة ومتوافق مع الآيباد -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
     <style>
         body { font-family: Tahoma, sans-serif; background: #f8f9fa; text-align: center; margin: 0; padding: 15px; }
         .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: right; }
         .back-btn { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-size: 14px; text-decoration: none; display: inline-block; }
-        #reader { width: 100%; border-radius: 8px; overflow: hidden; margin-top: 10px; }
-        .result-card { background: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #ddd; text-align: center; margin-top: 15px; }
-        .result-card img { width: 130px; height: 130px; border-radius: 50%; object-fit: cover; border: 3px solid #007bff; margin-bottom: 10px; }
+        input { width: 100%; padding: 12px; margin: 8px 0 15px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; text-align: right; }
+        .search-btn { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        
+        #resultCard { margin-top: 20px; background: #f1f3f4; padding: 20px; border-radius: 12px; display: none; text-align: center; }
+        .student-big-img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #007bff; margin-bottom: 10px; }
+        .success-box { background: #d4edda; color: #155724; padding: 10px; border-radius: 6px; margin-top: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <a href="index.html" class="back-btn">⬅ عودة للرئيسية</a>
-    <h3 style="text-align:center;">ماسح البطاقات</h3>
-    <div id="reader"></div>
-    <div id="resultBox" class="result-card" style="display:none;">
-        <img id="resPhoto" src="" alt="صورة الطالب">
-        <h3 id="resName">--</h3>
-        <p><strong>الصف:</strong> <span id="resClass">--</span></p>
-        <p><strong>الرقم الامتحاني:</strong> <span id="resID">--</span></p>
-        <button class="back-btn" style="background:#007bff; width:100%; border:none; padding:12px; font-size:16px;" onclick="resetScan()">فحص طالب آخر</button>
+    <h3 style="text-align:center;">نظام مسح وفحص الطلاب</h3>
+
+    <div style="background: #fff; padding: 15px; border: 1px solid #eee; border-radius: 10px;">
+        <label>أدخل أو مسح الرقم الامتحاني (ID):</label>
+        <input type="text" id="scanID" placeholder="مثال: 01 أو 02">
+        <button class="search-btn" onclick="findStudent()">بحث عن الطالب</button>
+    </div>
+
+    <!-- كارت عرض نتيجة البحث والطالب -->
+    <div id="resultCard">
+        <img id="resPhoto" class="student-big-img" src="" alt="صورة الطالب">
+        <h2 id="resName" style="margin: 5px 0; color: #333;"></h2>
+        <p id="resDetails" style="color: #666; font-size: 16px;"></p>
+        <div class="success-box">✅ تم التعرف على الطالب بنجاح في النظام</div>
     </div>
 </div>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.firestore.js";
-
+<script>
     const firebaseConfig = {
       apiKey: "AIzaSyBiakUsaKfRXNzM2MPekhcMAfqZibyH8lg",
       authDomain: "studentscannersystem.firebaseapp.com",
@@ -42,37 +52,40 @@
       appId: "1:639227810648:web:a586a171027b9689b08b2d"
     };
 
-    const db = getFirestore(initializeApp(firebaseConfig));
-    let html5QrCode = new Html5Qrcode("reader");
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 220, height: 220 } },
-        async (decodedText) => {
-            html5QrCode.stop();
-            const id = decodedText.trim();
-            const docSnap = await getDoc(doc(db, "students", id));
-            
-            document.getElementById('reader').style.display = 'none';
-            document.getElementById('resultBox').style.display = 'block';
+    window.findStudent = function() {
+        const id = document.getElementById('scanID').value.trim();
+        const resultCard = document.getElementById('resultCard');
 
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                document.getElementById('resName').innerText = data.fullName;
-                document.getElementById('resClass').innerText = data.className;
-                document.getElementById('resID').innerText = id;
-                document.getElementById('resPhoto').src = data.photoURL || "https://via.placeholder.com/130";
-            } else {
-                document.getElementById('resName').innerText = "الطالب غير مسجل!";
-                document.getElementById('resClass').innerText = "--";
-                document.getElementById('resID').innerText = id;
-                document.getElementById('resPhoto').src = "https://via.placeholder.com/130";
-            }
+        if (!id) {
+            alert("الرجاء إدخال أو مسح الرقم الامتحاني!");
+            return;
         }
-    ).catch(err => console.log(err));
 
-    window.resetScan = function() {
-        location.reload();
+        db.collection("students").doc(id).get().then((doc) => {
+            if (doc.exists) {
+                const data = doc.data();
+                document.getElementById('resName').innerText = data.fullName;
+                document.getElementById('resDetails').innerText = `المرحلة: ${data.className || 'غيرحدد'} | الشعبة: ${data.section || 'غيرحدد'} | ID: ${doc.id}`;
+                
+                const photoImg = document.getElementById('resPhoto');
+                if (data.photoURL) {
+                    photoImg.src = data.photoURL;
+                    photoImg.style.display = "inline-block";
+                } else {
+                    photoImg.style.display = "none";
+                }
+
+                resultCard.style.display = "block";
+            } else {
+                resultCard.style.display = "none";
+                alert("لم يتم العثور على طالب بهذا الرقم في قاعدة البيانات!");
+            }
+        }).catch((error) => {
+            alert("حدث خطأ في البحث: " + error.message);
+        });
     };
 </script>
 
