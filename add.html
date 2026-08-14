@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة وإضافة الطلاب</title>
+    <style>
+        body { font-family: Tahoma, sans-serif; background: #f8f9fa; text-align: center; margin: 0; padding: 15px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: right; }
+        .back-btn { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-size: 14px; text-decoration: none; display: inline-block; }
+        input { width: 100%; padding: 12px; margin: 8px 0 15px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; text-align: right; }
+        .form-submit { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        .list-item { background: #fdfdfd; padding: 10px; margin-bottom: 8px; border: 1px solid #eee; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="index.html" class="back-btn">⬅ عودة للرئيسية</a>
+    <h3 style="text-align:center;">إدارة وإضافة الطلاب</h3>
+    
+    <div style="background: #f1f3f4; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+        <input type="text" id="addID" placeholder="الرقم الامتحاني / QR ID">
+        <input type="text" id="addName" placeholder="اسم الطالب الكامل">
+        <input type="text" id="addClass" placeholder="الصف / المرحلة">
+        <input type="url" id="addPhoto" placeholder="رابط صورة الطالب (URL)">
+        <button class="form-submit" onclick="addNewStudentFromUI()">حفظ وإضافة الطالب</button>
+    </div>
+
+    <div id="studentsList">
+        <p style="text-align:center;">جاري جلب السجلات...</p>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.js";
+    import { getFirestore, doc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBiakUsaKfRXNzM2MPekhcMAfqZibyH8lg",
+      authDomain: "studentscannersystem.firebaseapp.com",
+      projectId: "studentscannersystem",
+      storageBucket: "studentscannersystem.firebasestorage.app",
+      messagingSenderId: "639227810648",
+      appId: "1:639227810648:web:a586a171027b9689b08b2d"
+    };
+
+    const db = getFirestore(initializeApp(firebaseConfig));
+
+    async function loadStudentsList() {
+        const listDiv = document.getElementById('studentsList');
+        const querySnapshot = await getDocs(collection(db, "students"));
+        listDiv.innerHTML = "";
+        
+        if(querySnapshot.empty) {
+            listDiv.innerHTML = "<p style='text-align:center;'>لا يوجد طلاب مسجلين حالياً.</p>";
+            return;
+        }
+
+        querySnapshot.forEach((d) => {
+            const data = d.data();
+            listDiv.innerHTML += `
+                <div class="list-item">
+                    <span>${data.fullName} (${data.className})</span>
+                    <small style="color: #666;">ID: ${d.id}</small>
+                </div>
+            `;
+        });
+    }
+
+    window.addNewStudentFromUI = async function() {
+        const id = document.getElementById('addID').value.trim();
+        const fullName = document.getElementById('addName').value.trim();
+        const className = document.getElementById('addClass').value.trim();
+        const photoURL = document.getElementById('addPhoto').value.trim();
+
+        if(!id || !fullName) return alert("الرجاء إدخال الرقم والاسم على الأقل");
+
+        await setDoc(doc(db, "students", id), { fullName, className, photoURL });
+        alert("تم حفظ الطالب بنجاح!");
+        document.getElementById('addID').value = '';
+        document.getElementById('addName').value = '';
+        document.getElementById('addClass').value = '';
+        document.getElementById('addPhoto').value = '';
+        loadStudentsList();
+    };
+
+    loadStudentsList();
+</script>
+
+</body>
+</html>
