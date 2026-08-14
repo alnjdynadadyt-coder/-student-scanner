@@ -4,35 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة تحكم المدرسة</title>
+    
     <style>
         body { font-family: Tahoma, sans-serif; background: #f8f9fa; text-align: center; margin: 0; padding: 20px; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        h2.title { color: #222; margin-bottom: 25px; font-size: 24px; }
-        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .dash-btn { padding: 18px 10px; font-size: 15px; font-weight: bold; color: white; border: none; border-radius: 10px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 3px 6px rgba(0,0,0,0.1); text-decoration: none; }
-        .dash-btn:active { transform: scale(0.98); }
-        .btn-scanner { background: #007bff; grid-column: span 2; font-size: 17px; }
-        .btn-export { background: #28a745; }
-        .btn-add { background: #007bff; }
-        .btn-archive { background: #6f42c1; grid-column: span 2; }
-        .btn-delete { background: #dc3545; }
-        .btn-backup { background: #343a40; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+        h2 { color: #333; margin-bottom: 25px; }
+        
+        /* تنسيق أزرار لوحة التحكم لتكون بارزة وسهلة اللمس على الآيباد */
+        .menu-btn {
+            width: 100%;
+            padding: 16px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            text-decoration: none;
+            display: block;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: transform 0.1s ease;
+        }
+        .menu-btn:active { transform: scale(0.98); }
+
+        /* ألوان مخصصة لكل زر لسهولة التمييز */
+        .btn-scan { background: #007bff; } /* ماسح الباركود السريع */
+        .btn-cards { background: #6f42c1; } /* صفحة عرض وطباعة البطاقات (الجديد) */
+        .btn-manage { background: #17a2b8; } /* إدارة وإضافة الطلاب */
+        .btn-export { background: #28a745; } /* التصدير والاستيراد */
+        .btn-archive { background: #6c757d; } /* أرشيف المحذوفات */
+        .btn-backup { background: #343a40; } /* النسخ الاحتياطي */
+        .btn-delete { background: #dc3545; } /* حذف السجلات */
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2 class="title">لوحة تحكم المدرسة</h2>
-    <div class="dashboard-grid">
-        <a href="scanner.html" class="dash-btn btn-scanner">📷 ماسح الباركود السريع</a>
-        <a href="export.html" class="dash-btn btn-export">📥 التصدير والاستيراد</a>
-        <a href="add.html" class="dash-btn btn-add">👤 إدارة وإضافة الطلاب</a>
-        <a href="archive.html" class="dash-btn btn-archive">📦 إدارة أرشيف المحذوفات</a>
-        <a href="delete.html" class="dash-btn btn-delete">🗑️ حذف السجلات</a>
-        <a href="backup.html" class="dash-btn btn-backup">🛡️ النسخ الاحتياطي للنظام</a>
-    </div>
+    <h2>لوحة تحكم المدرسة</h2>
+
+    <!-- زر الماسح السريع -->
+    <a href="scan.html" class="menu-btn btn-scan">📷 ماسح الباركود السريع</a>
+
+    <!-- الزر الجديد: صفحة عرض وطباعة البطاقات والباركود -->
+    <a href="cards.html" class="menu-btn btn-cards">🖨 بطاقات ومستمسكات الطلاب (QR)</a>
+
+    <!-- زر إدارة وإضافة الطلاب -->
+    <a href="add.html" class="menu-btn btn-manage">👤 إدارة وإضافة الطلاب</a>
+
+    <!-- بقية أزرار النظام -->
+    <a href="#" class="menu-btn btn-export">📦 التصدير والاستيراد</a>
+    <a href="#" class="menu-btn btn-archive">🗄 إدارة أرشيف المحذوفات</a>
+    <a href="#" class="menu-btn btn-backup">🛡 النسخ الاحتياطي للنظام</a>
+    <a href="#" class="menu-btn btn-delete">🗑 حذف السجلات</a>
 </div>
 
 </body>
 </html>
- 
