@@ -11,12 +11,17 @@
 
     <style>
         body { font-family: Tahoma, sans-serif; background: #f8f9fa; text-align: center; margin: 0; padding: 15px; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: right; }
+        .container { max-width: 650px; margin: auto; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: right; }
         .back-btn { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-size: 14px; text-decoration: none; display: inline-block; }
         input, select { width: 100%; padding: 12px; margin: 8px 0 15px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; text-align: right; background: #fff; }
         .form-submit { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
         #statusBox { background: #e9ecef; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; color: #333; text-align: center; font-weight: bold; }
-        .list-item { background: #fdfdfd; padding: 12px; margin-bottom: 8px; border: 1px solid #eee; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .list-item { background: #fdfdfd; padding: 12px; margin-bottom: 10px; border: 1px solid #eee; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .student-info { display: flex; align-items: center; }
+        .student-thumb { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; margin-left: 12px; border: 1px solid #ddd; }
+        .actions-group button { padding: 6px 10px; margin-right: 5px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .btn-edit { background: #ffc107; color: #000; }
+        .btn-delete { background: #dc3545; color: #fff; }
     </style>
 </head>
 <body>
@@ -25,7 +30,7 @@
     <a href="index.html" class="back-btn">⬅ عودة للرئيسية</a>
     <h3 style="text-align:center;">إدارة وإضافة الطلاب</h3>
     
-    <div id="statusBox">جاري الاتصال بقاعدة البيانات...</div>
+    <div id="statusBox">✅ متصل بقاعدة البيانات بنجاح</div>
 
     <div style="background: #f1f3f4; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
         <label>الرقم الامتحاني (ID):</label>
@@ -52,10 +57,13 @@
             <option value="ب">ب</option>
             <option value="ج">ج</option>
             <option value="د">د</option>
-            <option value="هاء">هاء</option>
+            <option value="هـ">هـ</option>
             <option value="و">و</option>
             <option value="ز">ز</option>
         </select>
+
+        <label>صورة الطالب (اختر من الآيباد):</label>
+        <input type="file" id="addPhotoFile" accept="image/*" style="background:#fff;">
 
         <button class="form-submit" onclick="saveStudent()">حفظ وإضافة الطالب</button>
     </div>
@@ -67,7 +75,6 @@
 </div>
 
 <script>
-    // إعدادات مشروعك المباشرة
     const firebaseConfig = {
       apiKey: "AIzaSyBiakUsaKfRXNzM2MPekhcMAfqZibyH8lg",
       authDomain: "studentscannersystem.firebaseapp.com",
@@ -77,15 +84,21 @@
       appId: "1:639227810648:web:a586a171027b9689b08b2d"
     };
 
-    // تهيئة فايربيز بالطريقة المباشرة
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-
     const statusBox = document.getElementById('statusBox');
-    statusBox.innerHTML = "✅ متصل بقاعدة البيانات بنجاح";
-    statusBox.style.color = "green";
 
-    // جلب وعرض الطلاب مباشرة
+    // تحويل الصورة إلى Base64 لكي تخزن مباشرة في القاعدة
+    function getBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    // جلب وعرض الطلاب مع أزرار التعديل والحذف
     function loadStudents() {
         const listDiv = document.getElementById('studentsList');
         db.collection("students").get().then((querySnapshot) => {
@@ -96,41 +109,64 @@
             }
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
+                const photoHtml = data.photoURL ? `<img src="${data.photoURL}" class="student-thumb">` : `<div style="width:45px;height:45px;background:#ddd;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;margin-left:12px;color:#555;">بدون</div>`;
+                
                 listDiv.innerHTML += `
                     <div class="list-item">
-                        <div>
-                            <strong>${data.fullName}</strong><br>
-                            <small style="color:#666;">${data.className || ''} - شعبة ${data.section || ''}</small>
+                        <div class="student-info">
+                            ${photoHtml}
+                            <div>
+                                <strong>${data.fullName}</strong><br>
+                                <small style="color:#666;">${data.className || ''} - شعبة ${data.section || ''} | <span style="color:blue;">ID: ${doc.id}</span></small>
+                            </div>
                         </div>
-                        <small style="color: blue; font-weight: bold;">ID: ${doc.id}</small>
+                        <div class="actions-group">
+                            <button class="btn-edit" onclick="editStudent('${doc.id}', '${data.fullName}', '${data.className || ''}', '${data.section || ''}')">تعديل</button>
+                            <button class="btn-delete" onclick="deleteStudent('${doc.id}')">حذف</button>
+                        </div>
                     </div>
                 `;
             });
         }).catch((error) => {
-            listDiv.innerHTML = "<p style='text-align:center; color:red;'>خطأ في قراءة البيانات: " + error.message + "</p>";
+            listDiv.innerHTML = "<p style='text-align:center; color:red;'>خطأ في القراءة: " + error.message + "</p>";
         });
     }
 
-    // حفظ الطالب
-    window.saveStudent = function() {
+    // حفظ أو إضافة طالب جديد
+    window.saveStudent = async function() {
         const id = document.getElementById('addID').value.trim();
         const fullName = document.getElementById('addName').value.trim();
         const className = document.getElementById('addClass').value;
         const section = document.getElementById('addSection').value;
+        const fileInput = document.getElementById('addPhotoFile');
 
         if (!id || !fullName) {
-            alert("الرجاء إدخال الرقم الامتحاني واسم الطالب!");
+            alert("الرجاء إدخال الرقم الامتحاني واسم الطالب على الأقل!");
             return;
+        }
+
+        let photoURL = "";
+        if (fileInput.files.length > 0) {
+            try {
+                photoURL = await getBase64(fileInput.files[0]);
+            } catch(e) {
+                console.log("خطأ في قراءة الصورة");
+            }
         }
 
         statusBox.innerHTML = "⏳ جاري الحفظ في النظام...";
         
-        db.collection("students").doc(id).set({
+        let studentData = {
             fullName: fullName,
             className: className,
-            section: section,
-            photoURL: ""
-        }).then(() => {
+            section: section
+        };
+        
+        if (photoURL) {
+            studentData.photoURL = photoURL;
+        }
+
+        db.collection("students").doc(id).set(studentData, { merge: true }).then(() => {
             statusBox.innerHTML = "✅ تم حفظ الطالب بنجاح!";
             statusBox.style.color = "green";
             alert("تم حفظ الطالب بنجاح!");
@@ -140,6 +176,7 @@
             document.getElementById('addName').value = '';
             document.getElementById('addClass').value = '';
             document.getElementById('addSection').value = '';
+            fileInput.value = '';
             
             loadStudents();
         }).catch((error) => {
@@ -149,7 +186,28 @@
         });
     };
 
-    // تشغيل الدالة عند فتح الصفحة
+    // حذف طالب
+    window.deleteStudent = function(id) {
+        if (confirm("هل أنت متأكد من حذف الطالب ذو الرقم الامتحاني: " + id + "؟")) {
+            db.collection("students").doc(id).delete().then(() => {
+                alert("تم حذف الطالب بنجاح.");
+                loadStudents();
+            }).catch((error) => {
+                alert("خطأ أثناء الحذف: " + error.message);
+            });
+        }
+    };
+
+    // تعبئة الحقول لتعديل بيانات الطالب
+    window.editStudent = function(id, name, cls, sec) {
+        document.getElementById('addID').value = id;
+        document.getElementById('addName').value = name;
+        document.getElementById('addClass').value = cls;
+        document.getElementById('addSection').value = sec;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        alert("تم جلب بيانات الطالب للأعلى. قم بتعديلها ثم اضغط 'حفظ وإضافة الطالب' لتحديثها.");
+    };
+
     loadStudents();
 </script>
 
