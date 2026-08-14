@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بطاقات ومستمسكات الطلاب (QR)</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <!-- مكتبة توليد الباركود -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        body { font-family: Tahoma, sans-serif; background: #f4f6f9; margin: 0; padding: 15px; text-align: right; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .back-btn { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 20px; font-size: 14px; text-decoration: none; display: inline-block; }
+        
+        .filter-section { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #dee2e6; }
+        .filter-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+        input, select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; text-align: right; }
+        .action-btn { width: 100%; padding: 12px; background: #6f42c1; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; margin-top: 5px; }
+
+        /* تنسيق بطاقة الطالب والباركود */
+        .cards-grid { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
+        .student-card { background: #fff; border: 2px solid #007bff; border-radius: 12px; padding: 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .student-info { display: flex; align-items: center; gap: 15px; }
+        .student-thumb { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #28a745; }
+        .qrcode-container { background: white; padding: 5px; border-radius: 5px; display: flex; justify-content: center; align-items: center; }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; padding: 0; max-width: 100%; }
+            .back-btn, .filter-section { display: none; }
+            .student-card { break-inside: avoid; border: 1px solid #000; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="index.html" class="back-btn">⬅ عودة للرئيسية</a>
+    <h2 style="text-align:center; color:#333;">🖨 استعراض وطباعة بطاقات الطلاب</h2>
+
+    <div class="filter-section">
+        <div class="filter-group">
+            <label>بحث فردي (بواسطة اسم الطالب):</label>
+            <input type="text" id="searchName" placeholder="اكتب جزءاً من اسم الطالب...">
+        </div>
+        
+        <div style="text-align: center; margin: 10px 0; color: #666; font-weight: bold;">أو</div>
+
+        <div style="display: flex; gap: 10px;">
+            <div class="filter-group" style="flex: 1;">
+                <label>تحديد الصف:</label>
+                <select id="filterClass">
+                    <option value="">-- اختر الصف --</option>
+                    <option value="الأول الابتدائي">الأول الابتدائي</option>
+                    <option value="الثاني الابتدائي">الثاني الابتدائي</option>
+                    <option value="الثالث الابتدائي">الثالث الابتدائي</option>
+                    <option value="الرابع الابتدائي">الرابع الابتدائي</option>
+                    <option value="الخامس الابتدائي">الخامس الابتدائي</option>
+                    <option value="السادس الابتدائي">السادس الابتدائي</option>
+                </select>
+            </div>
+            <div class="filter-group" style="flex: 1;">
+                <label>تحديد الشعبة:</label>
+                <select id="filterSection">
+                    <option value="">-- اختر الشعبة --</option>
+                    <option value="أ">أ</option>
+                    <option value="ب">ب</option>
+                    <option value="ج">ج</option>
+                    <option value="د">د</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="action-btn" onclick="fetchStudentsCards()">عرض البطاقات</button>
+    </div>
+
+    <!-- منطقة عرض البطاقات -->
+    <div id="cardsContainer" class="cards-grid"></div>
+</div>
+
+<script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBiakUsaKfRXNzM2MPekhcMAfqZibyH8lg",
+      authDomain: "studentscannersystem.firebaseapp.com",
+      projectId: "studentscannersystem",
+      storageBucket: "studentscannersystem.firebasestorage.app",
+      messagingSenderId: "639227810648",
+      appId: "1:639227810648:web:a586a171027b9689b08b2d"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    function fetchStudentsCards() {
+        const searchName = document.getElementById('searchName').value.trim();
+        const filterClass = document.getElementById('filterClass').value;
+        const filterSection = document.getElementById('filterSection').value;
+        const container = document.getElementById('cardsContainer');
+        
+        container.innerHTML = "<p style='text-align:center;'>جاري البحث...</p>";
+
+        let query = db.collection("students");
+
+        // تطبيق الفلترة حسب الخيارات المدخلة
+        if (filterClass) {
+            query = query.where("className", "==", filterClass);
+        }
+        if (filterSection) {
+            query = query.where("section", "==", filterSection);
+        }
+
+        query.get().then((snapshot) => {
+            container.innerHTML = "";
+            if (snapshot.empty) {
+                container.innerHTML = "<p style='text-align:center; color:red;'>لم يتم العثور على طلاب مطابقين للشروط.</p>";
+                return;
+            }
+
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                const studentId = doc.id;
+                const fullName = data.fullName || '';
+
+                // إذا كتب المستخدم اسم للبحث الفردي، نقوم بالتصفية محلياً بالاسم
+                if (searchName && !fullName.includes(searchName)) {
+                    return; 
+                }
+
+                // بناء كرت الطالب
+                const cardId = "card_" + studentId;
+                const qrDivId = "qr_" + studentId;
+
+                const cardHtml = `
+                    <div class="student-card">
+                        <div class="student-info">
+                            <img src="${data.photoURL || 'https://via.placeholder.com/80'}" class="student-thumb">
+                            <div>
+                                <h3 style="margin: 0 0 5px 0; color: #333;">${fullName}</h3>
+                                <p style="margin: 0; color: #666; font-size: 14px;">الصف: ${data.className || '-'} | الشعبة: ${data.section || '-'}</p>
+                                <p style="margin: 3px 0 0 0; color: #007bff; font-size: 13px; font-weight: bold;">الرقم الامتحاني: ${studentId}</p>
+                            </div>
+                        </div>
+                        <div class="qrcode-container" id="${qrDivId}"></div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', cardHtml);
+
+                // توليد الـ QR Code لكل طالب
+                new QRCode(document.getElementById(qrDivId), {
+                    text: studentId,
+                    width: 90,
+                    height: 90,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            });
+
+            if (container.innerHTML === "") {
+                container.innerHTML = "<p style='text-align:center; color:red;'>لا توجد نتائج تطابق الاسم المدخل ضمن هذا الصف والشعبة.</p>";
+            }
+
+        }).catch((error) => {
+            container.innerHTML = "<p style='text-align:center; color:red;'>خطأ في جلب البيانات: " + error.message + "</p>";
+        });
+    }
+</script>
+
+</body>
+</html>
