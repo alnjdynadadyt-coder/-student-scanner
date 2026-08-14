@@ -3,304 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة تحكم المدرسة - نظام إدارة الطلاب</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <title>لوحة تحكم المدرسة</title>
     <style>
-        body { font-family: Tahoma, sans-serif; background: #f8f9fa; text-align: center; margin: 0; padding: 15px; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        body { font-family: Tahoma, sans-serif; background: #f8f9fa; text-align: center; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         h2.title { color: #222; margin-bottom: 25px; font-size: 24px; }
-        
-        /* شبكة الأزرار الاحترافية */
-        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-        .dash-btn { padding: 16px 10px; font-size: 15px; font-weight: bold; color: white; border: none; border-radius: 10px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .dash-btn { padding: 18px 10px; font-size: 15px; font-weight: bold; color: white; border: none; border-radius: 10px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 3px 6px rgba(0,0,0,0.1); text-decoration: none; }
         .dash-btn:active { transform: scale(0.98); }
-        
-        /* الألوان حسب اللوحة النموذجية */
         .btn-scanner { background: #007bff; grid-column: span 2; font-size: 17px; }
+        .btn-export { background: #28a745; }
         .btn-add { background: #007bff; }
-        .btn-reports { background: #28a745; }
         .btn-archive { background: #6f42c1; grid-column: span 2; }
-        .btn-backup { background: #343a40; }
         .btn-delete { background: #dc3545; }
-
-        /* الصفحات الداخلية */
-        .page { display: none; text-align: right; background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #eee; }
-        .page.active { display: block; }
-        .back-btn { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-size: 14px; }
-        
-        input, textarea { width: 100%; padding: 12px; margin: 8px 0 15px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; text-align: right; }
-        .form-submit { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
-        
-        #reader { width: 100%; border-radius: 8px; overflow: hidden; margin-top: 10px; }
-        .result-card { background: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #ddd; text-align: center; margin-top: 15px; }
-        .result-card img { width: 130px; height: 130px; border-radius: 50%; object-fit: cover; border: 3px solid #007bff; margin-bottom: 10px; }
-        .list-item { background: #fdfdfd; padding: 10px; margin-bottom: 8px; border: 1px solid #eee; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-backup { background: #343a40; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2 class="title">لوحة تحكم المدرسة</h2>
-
-    <!-- القائمة الرئيسية (الأزرار) -->
-    <div id="mainMenu" class="dashboard-grid">
-        <button class="dash-btn btn-scanner" onclick="switchPage('pageScanner')">📷 ماسح الباركود السريع</button>
-        <button class="dash-btn btn-add" onclick="switchPage('pageAdd')">👤 إدارة وإضافة الطلاب</button>
-        <button class="dash-btn btn-reports" onclick="switchPage('pageTools')">📥 التصدير والاستيراد</button>
-        <button class="dash-btn btn-archive" onclick="switchPage('pageArchive')">📦 إدارة أرشيف المحذوفات</button>
-        <button class="dash-btn btn-backup" onclick="switchPage('pageBackup')">🛡️ النسخ الاحتياطي للنظام</button>
-        <button class="dash-btn btn-delete" onclick="switchPage('pageDelete')">🗑️ حذف السجلات</button>
-    </div>
-
-    <!-- 1. صفحة الماسح -->
-    <div id="pageScanner" class="page">
-        <button class="back-btn" onclick="goHome()">⬅ عودة للرئيسية</button>
-        <h3 style="text-align:center;">ماسح البطاقات</h3>
-        <div id="reader"></div>
-        <div id="resultBox" class="result-card" style="display:none;">
-            <img id="resPhoto" src="" alt="صورة الطالب">
-            <h3 id="resName">--</h3>
-            <p><strong>الصف:</strong> <span id="resClass">--</span></p>
-            <p><strong>الرقم الامتحاني:</strong> <span id="resID">--</span></p>
-            <button class="back-btn" style="background:#007bff;" onclick="resetScan()">فحص طالب آخر</button>
-        </div>
-    </div>
-
-    <!-- 2. صفحة الإضافة -->
-    <div id="pageAdd" class="page">
-        <button class="back-btn" onclick="goHome()">⬅ عودة للرئيسية</button>
-        <h3>تسجيل طالب جديد</h3>
-        <form onsubmit="addNewStudent(event)">
-            <label>الرقم الامتحاني (QR ID):</label>
-            <input type="text" id="addID" required>
-            <label>اسم الطالب الكامل:</label>
-            <input type="text" id="addName" required>
-            <label>الصف / المرحلة:</label>
-            <input type="text" id="addClass" required>
-            <label>رابط الصورة (URL):</label>
-            <input type="url" id="addPhoto" required>
-            <button type="submit" class="form-submit">حفظ في قاعدة البيانات</button>
-        </form>
-    </div>
-
-    <!-- 3. صفحة الحذف -->
-    <div id="pageDelete" class="page">
-        <button class="back-btn" onclick="goHome()">⬅ عودة للرئيسية</button>
-        <h3 style="color: #dc3545;">حذف ونقل طالب للأرشيف</h3>
-        <label>أدخل الرقم الامتحاني للطالب المراد حذفه:</label>
-        <input type="text" id="delInputID" placeholder="مثال: 1001">
-        <button class="form-submit" style="background:#dc3545;" onclick="deleteStudent()">نقل إلى الأرشيف (المحذوفات)</button>
-    </div>
-
-    <!-- 4. صفحة الأرشيف (استرجاع المحذوفات) -->
-    <div id="pageArchive" class="page">
-        <button class="back-btn" onclick="goHome()">⬅ عودة للرئيسية</button>
-        <h3>أرشيف المحذوفات والاسترجاع</h3>
-        <button class="form-submit" style="background:#6f42c1; margin-bottom:15px;" onclick="loadTrashList()">عرض الطلاب المحذوفين</button>
-        <div id="trashContainer"></div>
-    </div>
-
-    <!-- 5. صفحة التصدير والاستيراد والنسخ الاحتياطي -->
-    <div id="pageTools" class="page">
-        <button class="back-btn" onclick="goHome()">⬅ عودة للرئيسية</button>
-        <h3>أدوات البيانات</h3>
-        <button class="form-submit" style="background:#007bff; margin-bottom:10px;" onclick="exportJSON()">تصدير نسخة بيانات (JSON)</button>
-        <label>استيراد بيانات (ملف JSON):</label>
-        <input type="file" id="importFile" accept=".json" style="background:#f1f1f1;">
-        <button class="form-submit" style="background:#28a745;" onclick="importJSON()">استيراد وتفعيل البيانات</button>
-    </div>
-
-    <div id="pageBackup" class="page">
-        <button class="back-btn" onclick="goHome()">⬅ عودة للرئيسية</button>
-        <h3>النسخ الاحتياطي للنظام</h3>
-        <p>يمكنك أخذ نسخة احتياطية كاملة لبيانات السحابة وحفظها على الآيباد.</p>
-        <button class="form-submit" style="background:#343a40;" onclick="exportJSON()">تحميل النسخة الاحتياطية الآن</button>
+    <div class="dashboard-grid">
+        <a href="scanner.html" class="dash-btn btn-scanner">📷 ماسح الباركود السريع</a>
+        <a href="export.html" class="dash-btn btn-export">📥 التصدير والاستيراد</a>
+        <a href="add.html" class="dash-btn btn-add">👤 إدارة وإضافة الطلاب</a>
+        <a href="archive.html" class="dash-btn btn-archive">📦 إدارة أرشيف المحذوفات</a>
+        <a href="delete.html" class="dash-btn btn-delete">🗑️ حذف السجلات</a>
+        <a href="backup.html" class="dash-btn btn-backup">🛡️ النسخ الاحتياطي للنظام</a>
     </div>
 </div>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.js";
-    import { getFirestore, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyBiakUsaKfRXNzM2MPekhcMAfqZibyH8lg",
-      authDomain: "studentscannersystem.firebaseapp.com",
-      projectId: "studentscannersystem",
-      storageBucket: "studentscannersystem.firebasestorage.app",
-      messagingSenderId: "639227810648",
-      appId: "1:639227810648:web:a586a171027b9689b08b2d",
-      measurementId: "G-JJMS0W2GH7"
-    };
-
-    const db = getFirestore(initializeApp(firebaseConfig));
-    let html5QrCode = null;
-
-    window.switchPage = function(pageId) {
-        document.getElementById('mainMenu').style.display = 'none';
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(pageId).classList.add('active');
-
-        if(pageId === 'pageScanner') {
-            startScanner();
-        } else {
-            stopScanner();
-        }
-    };
-
-    window.goHome = function() {
-        stopScanner();
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById('mainMenu').style.display = 'grid';
-    };
-
-    function startScanner() {
-        if (!html5QrCode) {
-            html5QrCode = new Html5Qrcode("reader");
-        }
-        html5QrCode.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 220, height: 220 } },
-            onScanSuccess
-        ).catch(err => console.log("الكاميرا تعمل مسبقاً"));
-    }
-
-    function stopScanner() {
-        if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().catch(err => console.error(err));
-        }
-    }
-
-    async function onScanSuccess(decodedText) {
-        stopScanner();
-        const id = decodedText.trim();
-        const docSnap = await getDoc(doc(db, "students", id));
-        
-        document.getElementById('reader').style.display = 'none';
-        document.getElementById('resultBox').style.display = 'block';
-
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            document.getElementById('resName').innerText = data.fullName;
-            document.getElementById('resClass').innerText = data.className;
-            document.getElementById('resID').innerText = id;
-            document.getElementById('resPhoto').src = data.photoURL || "https://via.placeholder.com/130";
-        } else {
-            document.getElementById('resName').innerText = "الطالب غير مسجل!";
-            document.getElementById('resClass').innerText = "--";
-            document.getElementById('resID').innerText = id;
-            document.getElementById('resPhoto').src = "https://via.placeholder.com/130";
-        }
-    }
-
-    window.resetScan = function() {
-        document.getElementById('resultBox').style.display = 'none';
-        document.getElementById('reader').style.display = 'block';
-        startScanner();
-    };
-
-    // إضافة طالب
-    window.addNewStudent = async function(event) {
-        event.preventDefault();
-        const id = document.getElementById('addID').value.trim();
-        const fullName = document.getElementById('addName').value.trim();
-        const className = document.getElementById('addClass').value.trim();
-        const photoURL = document.getElementById('addPhoto').value.trim();
-
-        await setDoc(doc(db, "students", id), { fullName, className, photoURL });
-        alert("تم حفظ بيانات الطالب بنجاح!");
-        event.target.reset();
-        goHome();
-    };
-
-    // الحذف ونقل للأرشيف
-    window.deleteStudent = async function() {
-        const id = document.getElementById('delInputID').value.trim();
-        if(!id) return alert("أدخل رقم الطالب");
-        const ref = doc(db, "students", id);
-        const snap = await getDoc(ref);
-        if(snap.exists()) {
-            await setDoc(doc(db, "trash", id), snap.data());
-            await deleteDoc(ref);
-            alert("تم نقل الطالب إلى الأرشيف بنجاح");
-            document.getElementById('delInputID').value = '';
-            goHome();
-        } else {
-            alert("الطالب غير موجود في قاعدة البيانات الأساسية");
-        }
-    };
-
-    // عرض أرشيف المحذوفات واسترجاعها
-    window.loadTrashList = async function() {
-        const container = document.getElementById('trashContainer');
-        container.innerHTML = "جاري التحميل...";
-        const snap = await getDocs(collection(db, "trash"));
-        container.innerHTML = "";
-        
-        if(snap.empty) {
-            container.innerHTML = "<p>الأرشيف فارغ تماماً.</p>";
-            return;
-        }
-
-        snap.forEach(d => {
-            const data = d.data();
-            container.innerHTML += `
-                <div class="list-item">
-                    <span>${data.fullName} (${d.id})</span>
-                    <button class="back-btn" style="background:#28a745; margin:0;" onclick="restoreStudent('${d.id}')">استرجاع</button>
-                </div>
-            `;
-        });
-    };
-
-    window.restoreStudent = async function(id) {
-        const ref = doc(db, "trash", id);
-        const snap = await getDoc(ref);
-        if(snap.exists()) {
-            await setDoc(doc(db, "students", id), snap.data());
-            await deleteDoc(ref);
-            alert("تم استرجاع الطالب بنجاح إلى النظام");
-            loadTrashList();
-        }
-    };
-
-    // تصدير البيانات كملف JSON للآيباد
-    window.exportJSON = async function() {
-        const snap = await getDocs(collection(db, "students"));
-        let list = [];
-        snap.forEach(d => list.push({ id: d.id, ...d.data() }));
-        
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(list));
-        const dlAnchor = document.createElement('a');
-        dlAnchor.setAttribute("href", dataStr);
-        dlAnchor.setAttribute("download", "school_students_backup.json");
-        document.body.appendChild(dlAnchor);
-        dlAnchor.click();
-        dlAnchor.remove();
-    };
-
-    // استيراد البيانات
-    window.importJSON = async function() {
-        const fileInput = document.getElementById('importFile');
-        if(fileInput.files.length === 0) return alert("اختر ملف JSON أولاً");
-        
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            try {
-                const arr = JSON.parse(e.target.result);
-                for(let item of arr) {
-                    const studentId = item.id;
-                    delete item.id;
-                    await setDoc(doc(db, "students", studentId), item);
-                }
-                alert("تم استيراد كافة البيانات وتحديث النظام بنجاح!");
-                goHome();
-            } catch(err) {
-                alert("ملف غير صالح أو خطأ في قراءة البيانات");
-            }
-        };
-        reader.readAsText(fileInput.files[0]);
-    };
-</script>
-
 </body>
 </html>
+ 
